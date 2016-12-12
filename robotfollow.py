@@ -24,6 +24,9 @@ class World:
         self.curr_time = 0
         self.time_step = time_step
         self.robots = []
+        self.state = None
+        self.history = None
+        self.running = True
         for i in range(num_robots):
             x = random.randint(_STAGE_MIN_X, _STAGE_MAX_X)
             y = random.randint(_STAGE_MIN_Y, _STAGE_MAX_Y)
@@ -65,10 +68,19 @@ class World:
         return x_hist, y_hist
 
     def update(self):
+        if not self.running:
+            return self.state, self.history
+
         for r in self.robots:
             r.update_state(self.time_step)
         self.curr_time += self.time_step
-        return self.get_robot_states(), self.get_robot_histories()
+        next_state = self.get_robot_states()
+        if self.state == next_state:
+            self.running = False
+        else:
+            self.state = next_state
+            self.history = self.get_robot_histories()
+        return self.state, self.history
 
 class Robot:
     def update_state(self, dt):
@@ -113,7 +125,7 @@ class Robot:
         else:
             self.u_l = u_r
 
-    def perform_open_loop(self):
+    def perform_open_loop(self): 
         if self.open_loop:
             self.u_r = self.open_loop_r(self.u_r)
             self.u_l = self.open_loop_l(self.u_l)
@@ -128,13 +140,15 @@ class Robot:
         elif self.u_l < -self.max_spin:
             self.u_l = -self.max_spin
             
-    def set_open_loop_control(self, func_right, func_left=None):
+    def set_open_loop_control(self, func_right, func_left=None, disable_waypoint=True):
         self.open_loop_r = func_right
         if func_left:
             self.open_loop_l = func_left
         else:
             self.open_loop_l = func_right
         self.open_loop = True
+        if disable_waypoint:
+            self.enable_waypoint = False
 
     def get_distance_components(self, x, y):
         dx = x - self.x
@@ -169,7 +183,7 @@ class Robot:
         self.set_speed(speed)
 
     def act_on_waypoint(self):
-        if not self.enable_waypoints:
+        if not self.enable_waypoint:
             return
         if not self.waypoint:
             # no more waypoints
@@ -202,7 +216,7 @@ class Robot:
             self.act_on_waypoint()
     
     def get_active_waypoint(self):
-        if self.enable_waypoints and self.waypoint:
+        if self.enable_waypoint and self.waypoint:
             return self.waypoint[0]
         return None
     
@@ -217,7 +231,7 @@ class Robot:
         self.u_l = 0
         self.max_spin = max_spin
         self.open_loop = False
-        self.enable_waypoints = True
+        self.enable_waypoint = True
         self.waypoint = []
 
         # closed loop gains, turning/driving
@@ -268,10 +282,19 @@ def plot_waypoints(world):
         wp.append(plt.scatter(w['x'], w['y'], color='r', zorder=4, marker='x', s=200))
     return wp
 
-def simulate(world, steps):
-    for i in range(steps):
-        world.update()
-        draw(world)
+def simulate(world, title='Bots', steps=None):
+    create_plot(title)
+    #if limited time set
+    if steps:
+        for i in range(steps):
+            world.update()
+            draw(world)
+    #otherwise simulate until finished
+    else:
+        while world.running:
+            world.update()
+            draw(world)
+            
     # display one more frame for a second, then close
     draw(world, clear=False)
     plt.pause(1) 
@@ -287,6 +310,12 @@ def convert_tpt_to_waypoints(tpt):
     """
     if not tpt: #empty 
         return 
+   
+    def theta_different(t1, t2):
+        return abs(t1 - t2) > _THRESH_ANGLE
+
+    def distance_different(d1, d2):
+        return abs(d1 - d2) > _THRESH_DISTANCE
 
     all_waypoints = tpt 
     turning = False
@@ -295,73 +324,84 @@ def convert_tpt_to_waypoints(tpt):
     waypoints = []
     waypoints.append(all_waypoints[0])
     for curr_w in all_waypoints:
-        if curr_w['theta'] != prev_w['theta']:
+        if theta_different(curr_w['theta'], prev_w['theta']):
             turning = True
         elif turning:
-            waypoints.append(curr_waypoint)
+            waypoints.append(curr_w)
             turning = False
-        if curr_w['x'] != prev_w['x'] or curr_w['y'] != prev_w['y']:
+        if distance_different(curr_w['x'], prev_w['x']) or distance_different(curr_w['y'], prev_w['y']):
             driving = True
         elif driving:
-            waypoints.append(curr_waypoint)
+            waypoints.append(curr_w)
             driving = False
+        prev_w = curr_w
+    waypoints.append(all_waypoints[-1])
     return waypoints
 
-def create_tpt_data(num_waypoints=10):
+def create_tpt_data(num_waypoints=4):
     def rand_pose():
         x = random.uniform(_STAGE_MIN_X, _STAGE_MAX_X)
         y = random.uniform(_STAGE_MIN_Y, _STAGE_MAX_Y)
         theta = random.uniform(0, pi)
         return {'x':x, 'y':y, 'theta':theta}
+    print("Creating Target Pose Trajectory:")
     waypoints = []
     for i in range(num_waypoints):
         waypoints.append(rand_pose())
     init_pose = waypoints[0]
     rob = Robot(0, x=init_pose['x'], y=init_pose['y'], theta=init_pose['theta'], max_spin=.01)
-    for t in range(1000000):
-        rob.update_state(t*.001)
+    rob.waypoint = waypoints
+    prev_state = rob.get_state()
+    curr_state = None
+    prev_wp_remaining = len(rob.waypoint)
+    curr_wp_remaining = None
+    while curr_state != prev_state:
+        #progress
+        curr_wp_remaining = len(rob.waypoint)
+        if curr_wp_remaining != prev_wp_remaining:
+            print("\t" + str(curr_wp_remaining) + " Waypoints Remaining")
+            prev_wp_remaining = curr_wp_remaining
+        #step physics
+        rob.update_state(.1)
+        prev_state = curr_state
+        curr_state = rob.get_state()
+    print("Done")
     return gen_waypoint_list(*rob.get_history())
     
 def problem1():
-    create_plot('Problem 1: Open Loop Control (Braking)')
-    
     # create single robot with open loop braking
-    rob = Robot(0, theta=pi/3)
+    rob = Robot(0, theta=pi/3, max_spin=10)
     rob.set_speed(10)
-    rob.set_open_loop_control(lambda x: .9 * x)
+    rob.set_open_loop_control(lambda x: .9 * x, disable_waypoint=True)
 
     # create world, add robot
     world = World(0)
     world.add_bot(rob)
 
-    simulate(world, 10)
+    simulate(world, 'Problem 1: Open Loop Control (Braking)', 10)
 
     world.clear_bots()
-    create_plot('Problem 1: Open Loop Control (Rotating, Accelerating)')
-    rob = Robot(0, theta=pi/3)
+    rob = Robot(0, theta=pi/3, max_spin=10)
     rob.set_speed(1,-1)
     world.add_bot(rob)
-    rob.set_open_loop_control(lambda x: 1.01 * x)
-    simulate(world, 70)
+    rob.set_open_loop_control(lambda x: 1.01 * x, disable_waypoint=True)
+    simulate(world, 'Problem 1: Open Loop Control (Rotating, Accelerating)', 70)
 
     world.clear_bots()
-    create_plot('Problem 1: Open Loop Control (Turning, Accelerating)')
-    rob = Robot(0, theta=pi/3)
+    rob = Robot(0, theta=pi/3, max_spin=10)
     rob.set_speed(1, 2.2)
-    rob.set_open_loop_control(lambda right: 1.01 * right, lambda left: 1.008 * left)
+    rob.set_open_loop_control(lambda right: 1.01 * right, lambda left: 1.008 * left, disable_waypoint=True)
     world.add_bot(rob)
-    simulate(world, 120)
+    simulate(world, 'Problem 1: Open Loop Control (Turning, Accelerating)', 120)
 
 def problem2():
-    create_plot('Problem 2: Closed Loop Control')
     world = World(0)
     rob = Robot(0)
     rob.waypoint = [{'x':20,'y':30,'theta':pi/2}]
     world.add_bot(rob)
-    simulate(world, 150)
+    simulate(world, 'Problem 2: Closed Loop Control')
 
     world.clear_bots()
-    create_plot('Problem 2: Closed Loop Control (Multiple Robots)')
     world = World(0)
     bots = []
     r0 = Robot(0,x=-35,y=30)
@@ -401,10 +441,16 @@ def problem2():
     bots.append(r4)
     for r in bots:
         world.add_bot(r)
-    simulate(world, 700)
+    simulate(world, 'Problem 2: Closed Loop Control (Multiple Robots)')
 
 def problem3():
-    pass
+    world = World(0)
+    rob = Robot(0)
+    tpt = create_tpt_data(10)
+    wp = convert_tpt_to_waypoints(tpt)
+    rob.waypoint = wp
+    world.add_bot(rob)
+    simulate(world, 'test', 10000)
 
 def problem4():
     pass
