@@ -7,13 +7,10 @@ ENEE322 Robot Follow Project
 import argparse
 from math import cos, sin, atan2, pi, degrees, sqrt
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import numpy as np
 import random
 
-# UNITS IN METERS, SECONDS, KILOGRAMS
+# UNITS IN METERS, RADIANS, SECONDS, KILOGRAMS
 
-_RUN_TIME = 10000 
 _STAGE_MIN_X = -50
 _STAGE_MAX_X =  50
 _STAGE_MIN_Y = -50
@@ -280,9 +277,51 @@ def simulate(world, steps):
     plt.pause(1) 
     plt.close()
 
-def gen_waypoint_dict(x,y,th):
+def gen_waypoint_list(x,y,th):
     return [{'x':x[w],'y':y[w],'theta':th[w]} for w in range(len(x))]
 
+def convert_tpt_to_waypoints(tpt):
+    """
+    simplify target pose trajectory for use by bots
+    assumes turning and translating are exclusive
+    """
+    if not tpt: #empty 
+        return 
+
+    all_waypoints = tpt 
+    turning = False
+    driving = False
+    prev_w = all_waypoints[0]
+    waypoints = []
+    waypoints.append(all_waypoints[0])
+    for curr_w in all_waypoints:
+        if curr_w['theta'] != prev_w['theta']:
+            turning = True
+        elif turning:
+            waypoints.append(curr_waypoint)
+            turning = False
+        if curr_w['x'] != prev_w['x'] or curr_w['y'] != prev_w['y']:
+            driving = True
+        elif driving:
+            waypoints.append(curr_waypoint)
+            driving = False
+    return waypoints
+
+def create_tpt_data(num_waypoints=10):
+    def rand_pose():
+        x = random.uniform(_STAGE_MIN_X, _STAGE_MAX_X)
+        y = random.uniform(_STAGE_MIN_Y, _STAGE_MAX_Y)
+        theta = random.uniform(0, pi)
+        return {'x':x, 'y':y, 'theta':theta}
+    waypoints = []
+    for i in range(num_waypoints):
+        waypoints.append(rand_pose())
+    init_pose = waypoints[0]
+    rob = Robot(0, x=init_pose['x'], y=init_pose['y'], theta=init_pose['theta'], max_spin=.01)
+    for t in range(1000000):
+        rob.update_state(t*.001)
+    return gen_waypoint_list(*rob.get_history())
+    
 def problem1():
     create_plot('Problem 1: Open Loop Control (Braking)')
     
@@ -314,39 +353,47 @@ def problem1():
     simulate(world, 120)
 
 def problem2():
+    create_plot('Problem 2: Closed Loop Control')
+    world = World(0)
+    rob = Robot(0)
+    rob.waypoint = [{'x':20,'y':30,'theta':pi/2}]
+    world.add_bot(rob)
+    simulate(world, 150)
+
+    world.clear_bots()
     create_plot('Problem 2: Closed Loop Control (Multiple Robots)')
     world = World(0)
     bots = []
     r0 = Robot(0,x=-35,y=30)
-    r0.waypoint = gen_waypoint_dict(
+    r0.waypoint = gen_waypoint_list(
         [-30,-25,-20,-15,-10,-5,0],
         [-20,16,-10,8,-4,0,0],
         [None]*7
     )
     bots.append(r0)
     r1 = Robot(1,x=-10,y=40)
-    r1.waypoint = gen_waypoint_dict(
+    r1.waypoint = gen_waypoint_list(
         [-5,20],
         [10,14],
         [None]*3
     )
     bots.append(r1)
     r2 = Robot(2,x=10,y=10)
-    r2.waypoint = gen_waypoint_dict(
+    r2.waypoint = gen_waypoint_list(
         [40,20],
         [30,20],
         [None]*2
     )
     bots.append(r2)
     r3 = Robot(3,x=18,y=-38)
-    r3.waypoint = gen_waypoint_dict(
+    r3.waypoint = gen_waypoint_list(
         [25,38,6,18],
         [-34,18,-5,-38],
         [None]*4 
     )
     bots.append(r3)
     r4 = Robot(3,x=38,y=18)
-    r4.waypoint = gen_waypoint_dict(
+    r4.waypoint = gen_waypoint_list(
         [6,18,25,38],
         [-5,-38,-34,18],
         [None]*4 
@@ -354,7 +401,7 @@ def problem2():
     bots.append(r4)
     for r in bots:
         world.add_bot(r)
-    simulate(world, 2000)
+    simulate(world, 700)
 
 def problem3():
     pass
@@ -376,6 +423,9 @@ def create_plot(title):
 def main():
     problem1()
     problem2()
+    problem3()
+    problem4()
+    problem5()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser() 
@@ -392,5 +442,3 @@ if __name__ == '__main__':
         probs[args.prob_num]()
     else:
         main()
-
-
