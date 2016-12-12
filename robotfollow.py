@@ -183,7 +183,11 @@ class Robot:
         if arrived:
             self.waypoint[0]['x'] = self.x
             self.waypoint[0]['y'] = self.y
+
+            # theta is allowed to be None. if so, keep robot at same heading
             d_theta = self.waypoint[0]['theta']
+            if not d_theta:
+                d_theta = self.theta
         else:
             d_theta = self.get_desired_theta(dx, dy)
         #delta theta = theta - desired theta
@@ -220,8 +224,8 @@ class Robot:
         self.waypoint = []
 
         # closed loop gains, turning/driving
-        self.tk = 0.65
-        self.dk = 0.8
+        self.tk = 0.9
+        self.dk = 0.9
         
         #used to graph line where bot has traveled
         self.x_history = [x]
@@ -276,6 +280,9 @@ def simulate(world, steps):
     plt.pause(1) 
     plt.close()
 
+def gen_waypoint_dict(x,y,th):
+    return [{'x':x[w],'y':y[w],'theta':th[w]} for w in range(len(x))]
+
 def problem1():
     create_plot('Problem 1: Open Loop Control (Braking)')
     
@@ -307,11 +314,46 @@ def problem1():
     simulate(world, 120)
 
 def problem2():
-    create_plot('Problem 2: Closed Loop Control')
-    rob = Robot(0)
-    rob.waypoint = [{'x':40, 'y':20, 'theta':pi},{'x':10, 'y':20, 'theta':1.2},{'x':0, 'y':-20, 'theta':2}]
+    create_plot('Problem 2: Closed Loop Control (Multiple Robots)')
     world = World(0)
-    world.add_bot(rob)
+    bots = []
+    r0 = Robot(0,x=-35,y=30)
+    r0.waypoint = gen_waypoint_dict(
+        [-30,-25,-20,-15,-10,-5,0],
+        [-20,16,-10,8,-4,0,0],
+        [None]*7
+    )
+    bots.append(r0)
+    r1 = Robot(1,x=-10,y=40)
+    r1.waypoint = gen_waypoint_dict(
+        [-5,20],
+        [10,14],
+        [None]*3
+    )
+    bots.append(r1)
+    r2 = Robot(2,x=10,y=10)
+    r2.waypoint = gen_waypoint_dict(
+        [40,20],
+        [30,20],
+        [None]*2
+    )
+    bots.append(r2)
+    r3 = Robot(3,x=18,y=-38)
+    r3.waypoint = gen_waypoint_dict(
+        [25,38,6,18],
+        [-34,18,-5,-38],
+        [None]*4 
+    )
+    bots.append(r3)
+    r4 = Robot(3,x=38,y=18)
+    r4.waypoint = gen_waypoint_dict(
+        [6,18,25,38],
+        [-5,-38,-34,18],
+        [None]*4 
+    )
+    bots.append(r4)
+    for r in bots:
+        world.add_bot(r)
     simulate(world, 2000)
 
 def problem3():
