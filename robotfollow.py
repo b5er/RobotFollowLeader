@@ -4,6 +4,7 @@
 ENEE322 Robot Follow Project
 """
 
+import argparse
 from math import cos, sin, pi, degrees
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -26,6 +27,12 @@ class World:
             y = random.randint(_STAGE_MIN_Y, _STAGE_MAX_Y)
             theta = random.uniform(0,pi)
             self.robots.append(Robot(i, x=x, y=y, theta=theta))
+
+    def add_bot(self, bot):
+        self.robots.append(bot)
+
+    def clear_bots(self):
+        self.robots = []
 
     def get_robot_states(self):
         x_list = []
@@ -56,6 +63,9 @@ class World:
 class Robot:
     def update_state(self, dt):
         """ change state based on a timestep and current state"""
+        if self.open_loop:
+            self.u_r = self.open_loop_r(self.u_r)
+            self.u_l = self.open_loop_l(self.u_l)
         self.x += 0.5 * self.radius * (self.u_r + self.u_l) * cos(self.theta) * dt
         self.y += 0.5 * self.radius * (self.u_r + self.u_l) * sin(self.theta) * dt
         self.theta += (self.radius / self.length) * (self.u_r - self.u_l) * dt
@@ -74,6 +84,22 @@ class Robot:
     def get_line(self):
         return self.x_history, self.y_history
 
+    def set_speed(self, u_r, u_l=None):
+        #   one arg: both same speed
+        self.u_r = u_r
+        if u_l:
+            self.u_l = u_l
+        else:
+            self.u_l = u_r
+            
+    def set_open_loop_control(self, func_right, func_left=None):
+        self.open_loop_r = func_right
+        if func_left:
+            self.open_loop_l = func_left
+        else:
+            self.open_loop_l = func_right
+        self.open_loop = True
+
     def __init__(self, idn, radius=4, length=10, x=0, y=0, theta=0, max_speed=1):
         self.idn = idn
         self.radius = radius
@@ -84,12 +110,13 @@ class Robot:
         self.u_r = 0
         self.u_l = 0
         self.max_speed = max_speed
+        self.open_loop = False
         
         #used to graph line where bot has traveled
         self.x_history = [x]
         self.y_history = [y]
 
-def animate():
+def draw(world, clear=True):
     """
     super inefficient method because scatter() doesn't accept array of unique markers
     """
@@ -109,28 +136,89 @@ def animate():
         line.append(plt.plot(x[r], y[r], color='b', zorder=1))
 
     plt.pause(.001) #its probably pausing for longer than 1ms
-    for bd in bot_dot:
-        bd.remove()
-    for l in line:
-        lp = l.pop(0)
-        lp.remove()
- 
-if __name__ == '__main__':
-    #demo world with 8 robots moving in straight lines
-    world = World(8)
-    for r in world.robots:
-        speed = random.random()*3 + .8
-        r.u_r = speed
-        r.u_l = speed
+    if clear:
+        for bd in bot_dot:
+            bd.remove()
+        for l in line:
+            lp = l.pop(0)
+            lp.remove()
 
-    # set up figure
+def simulate(world, steps):
+    for i in range(steps):
+        world.update()
+        draw(world)
+    # display one more frame for a second, then close
+    draw(world, clear=False)
+    plt.pause(1) 
+    plt.close()
+
+def problem1():
+    create_plot('Problem 1: Open Loop Control (Braking)')
+    
+    # create single robot with open loop braking
+    rob = Robot(0, theta=pi/3)
+    rob.set_speed(10)
+    rob.set_open_loop_control(lambda x: .9 * x)
+
+    # create world, add robot
+    world = World(0)
+    world.add_bot(rob)
+
+    simulate(world, 10)
+
+    world.clear_bots()
+    create_plot('Problem 1: Open Loop Control (Rotating, Accelerating)')
+    rob = Robot(0, theta=pi/3)
+    rob.set_speed(1,-1)
+    world.add_bot(rob)
+    rob.set_open_loop_control(lambda x: 1.01 * x)
+    simulate(world, 70)
+
+    world.clear_bots()
+    create_plot('Problem 1: Open Loop Control (Turning, Accelerating)')
+    rob = Robot(0, theta=pi/3)
+    rob.set_speed(1, 2.2)
+    rob.set_open_loop_control(lambda right: 1.01 * right, lambda left: 1.008 * left)
+    world.add_bot(rob)
+    simulate(world, 120)
+
+def problem2():
+    create_plot('Problem 2: Closed Loop Control')
+    plt.pause(10)
+
+def problem3():
+    pass
+
+def problem4():
+    pass
+
+def problem5():
+    pass
+
+def create_plot(title):
     plt.xlim(_STAGE_MIN_X, _STAGE_MAX_X)
     plt.ylim(_STAGE_MIN_Y, _STAGE_MAX_Y)
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.title('Robot Follow')
+    plt.title(title)
     plt.ion()
-    
-    # run/animate
-    for t in range(_RUN_TIME):
-        animate()
+
+def main():
+    problem1()
+    problem2()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser() 
+    parser.add_argument('prob_num', type=int, nargs='?')
+    args = parser.parse_args()
+    if args.prob_num:
+        probs = {
+            1:problem1, 
+            2:problem2, 
+            3:problem3, 
+            4:problem4,
+            5:problem5,
+        }
+        probs[args.prob_num]()
+    else:
+        main()
