@@ -314,15 +314,15 @@ class Robot:
         #used to graph line where bot has traveled
         self.x_history = [x]
         self.y_history = [y]
+        self.t_history = [theta]
         
 def create_plot(title):
-    """rather than creating figures etc just make new window each time"""
     plt.xlim(_STAGE_MIN_X, _STAGE_MAX_X)
     plt.ylim(_STAGE_MIN_Y, _STAGE_MAX_Y)
     plt.xlabel('x')
     plt.ylabel('y')
     plt.title(title)
-    plt.ion()self.t_history = [theta]
+    plt.ion()
 
 def draw(world, clear=True):
     """draw robots, pending waypoints, and histories
@@ -409,15 +409,10 @@ def gen_waypoint_list(x,y,theta):
     return [{'x':x[w],'y':y[w],'theta':theta[w]} for w in range(len(x))]
 
 def convert_tpt_to_waypoints(tpt):
-    """simplify target pose trajectory for use by bots
-    
-    assumes turning and translating are exclusive
-
-    doesn't work perfectly, sometimes ignores waypoints. fine for now 
     """
-    if not tpt: #empty 
-        return 
-   
+    simplify target pose trajectory for use by bots
+    assumes turning and translating are exclusive
+    """
     def theta_different(t1, t2):
         return abs(t1 - t2) > _THRESH_ANGLE
 
@@ -445,20 +440,17 @@ def convert_tpt_to_waypoints(tpt):
     waypoints.append(all_waypoints[-1])
     return waypoints
 
-def create_tpt_data(num_waypoints=4):
-    """creates random target pose trajectory based on desired number of waypoints
-
-    creates this data by using a robot to 'drive' through the waypoints at a slow pace
-    """
+def create_tpt_data(num_waypoints=4, waypoints=[]):
     def rand_pose():
         x = random.uniform(_STAGE_MIN_X, _STAGE_MAX_X)
         y = random.uniform(_STAGE_MIN_Y, _STAGE_MAX_Y)
         theta = random.uniform(0, pi)
         return {'x':x, 'y':y, 'theta':theta}
     print("Creating Target Pose Trajectory:")
-    waypoints = []
-    for i in range(num_waypoints):
-        waypoints.append(rand_pose())
+    #if not given waypoints
+    if not waypoints:
+        for i in range(num_waypoints):
+            waypoints.append(rand_pose())
     init_pose = waypoints[0]
     rob = Robot(0, x=init_pose['x'], y=init_pose['y'], theta=init_pose['theta'], max_spin=.01)
     rob.waypoint = waypoints
@@ -556,10 +548,24 @@ def problem2():
 
 def problem3():
     world = World(0)
-    rob = Robot(0)
-    tpt = create_tpt_data(5)
+    rob = Robot(0, x=40, y=-35)
+    waypoints = gen_waypoint_list(
+        [-30, 40, -20],
+        [-40, 15, -10],
+        [pi/3, pi, 0],
+    )
+    wpcp = list(waypoints)
+    tpt = create_tpt_data(3, waypoints)
+    x = []
+    y = []
+    for w in tpt:
+        x.append(w['x'])
+        y.append(w['y'])
+    plt.plot(x,y,color='m', zorder=-1)
     wp = convert_tpt_to_waypoints(tpt)
-    rob.waypoint = wp
+    wpcp[0]['x'] = 3.13
+    wpcp[0]['y'] = -13.51
+    rob.waypoint = wpcp
     world.add_bot(rob)
     simulate(world, 'Problem 3: Intercepting Target Pose Trajectory')
 
@@ -579,8 +585,8 @@ def problem5(n=8):
     line_proceed = ctl.create_formation() 
     simulate(world, 'Problem 5: N robots in Line Formation (N=' + str(n) + ')', next_func=[line_proceed])
 
+
 def main():
-    """run all problems sequentially"""
     problem1()
     problem2()
     problem3()
@@ -588,15 +594,6 @@ def main():
     problem5()
 
 if __name__ == '__main__':
-    """
-    usage:
-        robotfollow
-        -> runs all five problems in order
-        robotfollow p
-        -> runs problem p (if p between 1 and 5)
-        robotfollow -n N
-        -> runs problem 5 with N robots (N >= 0)
-    """
     parser = argparse.ArgumentParser() 
     parser.add_argument('prob_num', type=int, nargs='?')
     parser.add_argument('-n', type=int)
