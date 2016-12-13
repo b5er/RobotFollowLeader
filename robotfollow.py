@@ -82,6 +82,65 @@ class World:
             self.history = self.get_robot_histories()
         return self.state, self.history
 
+class Controller:
+    def __init__(self, bots=None):
+        self.bots = bots
+
+    def add_bot(self, bot):
+        self.bots.append(bot)
+
+    def find_avg_coord(self):
+        x = []
+        y = []
+        for r in self.bots:
+            rx, ry, _ = r.get_state()
+            x.append(rx)
+            y.append(ry)
+        avg_x = sum(x)/len(x)
+        avg_y = sum(y)/len(y)
+        return avg_x, avg_y
+
+    def create_formation(self, formation='line', **kwargs):
+        """
+        create and assign waypoints to bots based on chosen formation
+        for default formation, line, additional kwarg "theta" optional
+        """
+        if formation == 'line':
+            start_x, start_y = self.find_avg_coord()
+            if 'theta' in kwargs:
+                theta = kwargs['theta']
+            else:
+                theta = random.uniform(0,pi)
+            if 'spacing' in kwargs:
+                spacing = kwargs['spacing']
+            else:
+                spacing = 8
+            if 'travel_distance' in kwargs:
+                travel_distance = kwargs['travel_distance']
+            else:
+                travel_distance = 20
+
+            # create 'meetup' and final waypoints, assign them
+            meetup_x = start_x
+            meetup_y = start_y
+            final_waypoint = []
+            for r in self.bots:
+                r.waypoint = [] #clear any residue waypoints
+                ct = cos(theta)
+                st = sin(theta)
+                r.waypoint.append({'x':meetup_x,'y':meetup_y,'theta':theta})
+                final_waypoint.append({'x':meetup_x + travel_distance * ct,
+                                     'y':meetup_y + travel_distance * st,
+                                     'theta':theta})
+                meetup_x -= spacing * ct
+                meetup_y -= spacing * st
+
+            def update_func():
+                for i, r in enumerate(self.bots):
+                    r.waypoint.append(final_waypoint[i])
+                
+            return update_func # call for next stage of formation
+
 class Robot:
     def update_state(self, dt):
         """ change state based on a timestep and current state"""
@@ -282,7 +341,16 @@ def plot_waypoints(world):
         wp.append(plt.scatter(w['x'], w['y'], color='r', zorder=4, marker='x', s=200))
     return wp
 
-def simulate(world, title='Bots', steps=None):
+def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
+    def run():
+        while world.running or infinite:
+            world.update()
+            draw(world)
+        if next_func:
+            next_func.pop(0)() #call next function in list, continue simulation
+            world.running = True
+            run()
+
     create_plot(title)
     #if limited time set
     if steps:
@@ -291,13 +359,11 @@ def simulate(world, title='Bots', steps=None):
             draw(world)
     #otherwise simulate until finished
     else:
-        while world.running:
-            world.update()
-            draw(world)
+        run()  
             
-    # display one more frame for a second, then close
+    # display one more frame for a bit, then close
     draw(world, clear=False)
-    plt.pause(1) 
+    plt.pause(2) 
     plt.close()
 
 def gen_waypoint_list(x,y,th):
@@ -446,17 +512,27 @@ def problem2():
 def problem3():
     world = World(0)
     rob = Robot(0)
-    tpt = create_tpt_data(10)
+    tpt = create_tpt_data(5)
     wp = convert_tpt_to_waypoints(tpt)
     rob.waypoint = wp
     world.add_bot(rob)
-    simulate(world, 'test', 10000)
+    simulate(world, 'Problem 3: Intercepting Target Pose Trajectory')
 
 def problem4():
-    pass
+    world = World(0)
+    rob1 = Robot(0, x=30, y=20)
+    rob2 = Robot(1, x=-40, y=-40)
+    world.add_bot(rob1)
+    world.add_bot(rob2)
+    ctl = Controller(world.robots)
+    line_proceed = ctl.create_formation(theta=0.4)
+    simulate(world, 'Problem 4: 2 Robots in Line Formation', next_func=[line_proceed])
 
-def problem5():
-    pass
+def problem5(n=8):
+    world = World(n)
+    ctl = Controller(world.robots)
+    line_proceed = ctl.create_formation() 
+    simulate(world, 'Problem 5: N robots in Line Formation (N=' + str(n) + ')', next_func=[line_proceed])
 
 def create_plot(title):
     plt.xlim(_STAGE_MIN_X, _STAGE_MAX_X)
@@ -476,8 +552,11 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser() 
     parser.add_argument('prob_num', type=int, nargs='?')
+    parser.add_argument('-n', type=int)
     args = parser.parse_args()
-    if args.prob_num:
+    if args.n:
+        problem5(n=args.n)
+    elif args.prob_num:
         probs = {
             1:problem1, 
             2:problem2, 
