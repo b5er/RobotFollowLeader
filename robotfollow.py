@@ -20,7 +20,15 @@ _THRESH_ANGLE = .01
 _THRESH_DISTANCE = .2
 
 class World:
+    """contains/updates robots, gives history of their travel"""
+
     def __init__(self, num_robots=1, time_step=.1):
+        """ gen random bots unless specified
+
+        when desigining exact simulation, use World(0)
+        and add bots manually after setting them up
+        """
+
         self.curr_time = 0
         self.time_step = time_step
         self.robots = []
@@ -59,6 +67,7 @@ class World:
         return waypoints
 
     def get_robot_histories(self):
+        """for use in drawing paths"""
         x_hist = []
         y_hist = []
         for r in self.robots:
@@ -68,6 +77,7 @@ class World:
         return x_hist, y_hist
 
     def update(self):
+        """update all bots, check if simulation still running"""
         if not self.running:
             return self.state, self.history
 
@@ -83,6 +93,8 @@ class World:
         return self.state, self.history
 
 class Controller:
+    """Creates/controls formations of robots by setting waypoints"""
+
     def __init__(self, bots=None):
         self.bots = bots
 
@@ -101,8 +113,8 @@ class Controller:
         return avg_x, avg_y
 
     def create_formation(self, formation='line', **kwargs):
-        """
-        create and assign waypoints to bots based on chosen formation
+        """create and assign waypoints to bots based on chosen formation
+
         for default formation, line, additional kwarg "theta" optional
         """
         if formation == 'line':
@@ -136,6 +148,7 @@ class Controller:
                 meetup_y -= spacing * st
 
             def update_func():
+                """call this to advance bots to next stage when ready"""
                 for i, r in enumerate(self.bots):
                     r.waypoint.append(final_waypoint[i])
                 
@@ -143,13 +156,14 @@ class Controller:
 
 class Robot:
     def update_state(self, dt):
-        """ change state based on a timestep and current state"""
+        """change state based on a timestep and current state"""
         self.act_on_waypoint() #closed loop logic + feedback
         self.perform_open_loop()
         self.physics(dt)
         self.log_position_history()
    
     def physics(self, dt):
+        """simulate movement based on timestep, dt"""
         self.limit_speed()
         self.x += 0.5 * self.radius * (self.u_r + self.u_l) * cos(self.theta) * dt
         self.y += 0.5 * self.radius * (self.u_r + self.u_l) * sin(self.theta) * dt
@@ -300,11 +314,24 @@ class Robot:
         #used to graph line where bot has traveled
         self.x_history = [x]
         self.y_history = [y]
-        self.t_history = [theta]
+        
+def create_plot(title):
+    """rather than creating figures etc just make new window each time"""
+    plt.xlim(_STAGE_MIN_X, _STAGE_MAX_X)
+    plt.ylim(_STAGE_MIN_Y, _STAGE_MAX_Y)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title(title)
+    plt.ion()self.t_history = [theta]
 
 def draw(world, clear=True):
-    """
+    """draw robots, pending waypoints, and histories
+
     super inefficient method because scatter() doesn't accept array of unique markers
+    matplotlib not really suitable for this, but thrown together for sake of time
+
+    there are a few 2d physics libraries that can be used in place of this,
+    would speed up simulation exponentially + allow more robots at a time
     """
     poses, lines = world.update()
 
@@ -335,6 +362,7 @@ def draw(world, clear=True):
             lp.remove()
 
 def plot_waypoints(world):
+    """plot robot's next waypoints as red crosses"""
     waypoints = world.get_waypoints()
     wp = []
     for w in waypoints:
@@ -342,6 +370,16 @@ def plot_waypoints(world):
     return wp
 
 def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
+    """update and draw given world.
+
+    can simulate for a given number of steps, indefinitely,
+    or (by default) until bots stop moving
+
+    next_func is list of functions to be called each time simulation finished
+    this is a quick workaround for the formation code. a more proper way to do it
+    would be to add logic in either a controlling class or the robots themselves
+    that waits for all bots to be ready before proceeding. as it stands, this works for now
+    """
     def run():
         while world.running or infinite:
             world.update()
@@ -366,13 +404,16 @@ def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
     plt.pause(2) 
     plt.close()
 
-def gen_waypoint_list(x,y,th):
-    return [{'x':x[w],'y':y[w],'theta':th[w]} for w in range(len(x))]
+def gen_waypoint_list(x,y,theta):
+    """given equally sized lists of x, y, and theta, create waypoint list"""
+    return [{'x':x[w],'y':y[w],'theta':theta[w]} for w in range(len(x))]
 
 def convert_tpt_to_waypoints(tpt):
-    """
-    simplify target pose trajectory for use by bots
+    """simplify target pose trajectory for use by bots
+    
     assumes turning and translating are exclusive
+
+    doesn't work perfectly, sometimes ignores waypoints. fine for now 
     """
     if not tpt: #empty 
         return 
@@ -405,6 +446,10 @@ def convert_tpt_to_waypoints(tpt):
     return waypoints
 
 def create_tpt_data(num_waypoints=4):
+    """creates random target pose trajectory based on desired number of waypoints
+
+    creates this data by using a robot to 'drive' through the waypoints at a slow pace
+    """
     def rand_pose():
         x = random.uniform(_STAGE_MIN_X, _STAGE_MAX_X)
         y = random.uniform(_STAGE_MIN_Y, _STAGE_MAX_Y)
@@ -526,7 +571,7 @@ def problem4():
     world.add_bot(rob2)
     ctl = Controller(world.robots)
     line_proceed = ctl.create_formation(theta=0.4)
-    simulate(world, 'Problem 4: 2 Robots in Line Formation', next_func=[line_proceed])
+    simulate(world, 'Problem 4: Two Robots in Line Formation', next_func=[line_proceed])
 
 def problem5(n=8):
     world = World(n)
@@ -534,15 +579,8 @@ def problem5(n=8):
     line_proceed = ctl.create_formation() 
     simulate(world, 'Problem 5: N robots in Line Formation (N=' + str(n) + ')', next_func=[line_proceed])
 
-def create_plot(title):
-    plt.xlim(_STAGE_MIN_X, _STAGE_MAX_X)
-    plt.ylim(_STAGE_MIN_Y, _STAGE_MAX_Y)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(title)
-    plt.ion()
-
 def main():
+    """run all problems sequentially"""
     problem1()
     problem2()
     problem3()
@@ -550,6 +588,15 @@ def main():
     problem5()
 
 if __name__ == '__main__':
+    """
+    usage:
+        robotfollow
+        -> runs all five problems in order
+        robotfollow p
+        -> runs problem p (if p between 1 and 5)
+        robotfollow -n N
+        -> runs problem 5 with N robots (N >= 0)
+    """
     parser = argparse.ArgumentParser() 
     parser.add_argument('prob_num', type=int, nargs='?')
     parser.add_argument('-n', type=int)
