@@ -8,6 +8,8 @@ import argparse
 from math import cos, sin, atan2, pi, degrees, sqrt
 import matplotlib.pyplot as plt
 import random
+import tkinter as tk
+from tkinter import ttk
 
 # UNITS IN METERS, RADIANS, SECONDS, KILOGRAMS
 
@@ -586,6 +588,135 @@ def problem5(n=8):
     simulate(world, 'Problem 5: N robots in Line Formation (N=' + str(n) + ')', next_func=[line_proceed])
 
 
+class Gui(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        #tk.Tk.iconbitmap(self, default="clienticon.ico") (icon)
+        #tk.Tk.wm_title(self, "Title here")
+        self.master.title("Project")
+        self.master.config(bg="red")
+        self.grid(row=0, column=0)
+        self.exit()
+        self.Problem1()
+        self.Problem2()
+        self.Problem3()
+        self.Problem4()
+        self.Problem5()
+        
+
+    #problem1, bg =button color
+    def Problem1(self):
+        style1 = ttk.Style()
+        style1.configure("C.TButton", foreground='black', background='black',
+                        relief='raised', font=('Helvetica', 12))
+        style1.configure("BW.TLabel", padding=25)
+        #"Problem 1" text
+        self.l1 = ttk.Label(self, text="Problem 1: ", font=(5, 15, 'bold'),
+                            style="BW.TLabel").grid(row=0, column=0)
+        
+        
+        
+        #"Braking" button
+        self.p1a = ttk.Button(self, text="Braking", style="C.TButton",
+                              command=problem1)
+        self.p1a.grid(row=0, column=1, sticky='W', padx=5, pady=10,
+                      ipadx=55)
+
+        
+        #"Rotating, Accelerating" button
+        self.p1b = ttk.Button(self, text="Rotating, Accelerating",
+                              style="C.TButton", command=problem1)
+        self.p1b.grid(row=0, column=2, sticky='W', padx=5, pady=30,
+                      ipadx=29)
+        
+        #"Turning, Accelerating" button
+        self.p1c = ttk.Button(self, text="Turning, Accelerating",
+                              style="C.TButton", command=problem1)
+        self.p1c.grid(row=0, column=3, sticky='W', padx=5, pady=10,
+                      ipadx=29)
+        
+    
+    #problem2
+    def Problem2(self):
+        #"Problem 2" text
+        self.l2 = ttk.Label(self, text="Problem 2: ", style="BW.TLabel",
+                            font=(5, 15, 'bold')).grid(row=1, column=0)
+
+        
+        style2 = ttk.Style()
+        style2.configure("C.TButton", foreground='black', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Closed Loop Control" button
+        self.p2a = ttk.Button(self, text="Closed Loop Control", 
+                              style="C.TButton", command=problem2)
+        self.p2a.grid(row=1, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=32)
+
+        #"Closed Loop Control (Multiple Robots)" button
+        self.p2b = ttk.Button(self, text="Closed Loop (Multiple Robots)",
+                              style="C.TButton", command=problem2)
+        self.p2b.grid(row=1,column=2, padx=5, sticky='W', pady=30)
+
+    #problem3 
+    def Problem3(self):
+        #"Problem 3" text
+        self.l3 = ttk.Label(self, text="Problem 3: ", style="BW.TLabel",
+                            font=(5, 15, 'bold')).grid(row=2, column=0)
+
+        
+        style3 = ttk.Style()
+        style3.configure("C.TButton", foreground='white', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Inter. Target Pose Traj." button
+        self.p3 = ttk.Button(self, text="Inter. Target Pose Traj.", 
+                              style="C.TButton", command=problem3)
+        self.p3.grid(row=2, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=25)
+
+    #problem4
+    def Problem4(self):
+        #"Problem 4" text
+        self.l4 = ttk.Label(self, text="Problem 4: ", font=(5, 15, 'bold'),
+                            style="BW.TLabel").grid(row=3, column=0)
+
+        
+        style4 = ttk.Style()
+        style4.configure("C.TButton", foreground='black', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Inter. Target Pose Traj." button
+        self.p4 = ttk.Button(self, text="Two Robots in Line Formation", 
+                              style="C.TButton", command=problem4)
+        self.p4.grid(row=3, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=0)
+
+    #problem5
+    def Problem5(self):
+        #"Problem 5" text
+        self.l5 = ttk.Label(self, text="Problem 5: ", font=(5, 15, 'bold'),
+                            style="BW.TLabel").grid(row=4, column=0)
+
+        
+        style5 = ttk.Style()
+        style5.configure("C.TButton", foreground='black', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Inter. Target Pose Traj." button
+        self.p5 = ttk.Button(self, text="N robots in Line Formation", 
+                              style="C.TButton", command=problem5)
+        self.p5.grid(row=4, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=12)
+
+    #destroy process
+    #def destroy(self):
+
+    #exit
+    def exit(self):
+        self.exit = tk.Button(self, text="exit", fg="white", bg="black",
+                              command=root.destroy, width=104, anchor='n',
+                              font=5)
+        self.exit.grid(row=5, column=0, columnspan=10)
+        
+        
+
 def main():
     problem1()
     problem2()
@@ -598,6 +729,19 @@ if __name__ == '__main__':
     parser.add_argument('prob_num', type=int, nargs='?')
     parser.add_argument('-n', type=int)
     args = parser.parse_args()
+
+    
+    ##create window
+    root = tk.Tk()
+    root.geometry("915x480")
+    app = Gui(master=root)
+ #   root.iconbitmap(root, default="alySlack.ico")
+    app.mainloop()
+
+
+
+    
+    """
     if args.n:
         problem5(n=args.n)
     elif args.prob_num:
@@ -611,3 +755,4 @@ if __name__ == '__main__':
         probs[args.prob_num]()
     else:
         main()
+"""
