@@ -22,6 +22,8 @@ _STAGE_MAX_Y =  50
 _THRESH_ANGLE = .01
 _THRESH_DISTANCE = .2
 
+_STOP = False
+
 class World:
     """contains/updates robots, gives history of their travel"""
 
@@ -373,6 +375,7 @@ def plot_waypoints(world):
     return wp
 
 def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
+    
     """update and draw given world.
 
     can simulate for a given number of steps, indefinitely,
@@ -384,28 +387,47 @@ def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
     that waits for all bots to be ready before proceeding. as it stands, this works for now
     """
     def run():
-        while world.running or infinite:
+        if _STOP==True:
+            resume()
+        while world.running and (not _STOP):
             world.update()
             draw(world)
         if next_func:
             next_func.pop(0)() #call next function in list, continue simulation
-            world.running = True
             run()
-
+    
     create_plot(title)
     #if limited time set
     if steps:
+        resume()
         for i in range(steps):
+            if _STOP:
+                break
+                plt.close()
             world.update()
             draw(world)
+            
+                
+                
+            
+            
     #otherwise simulate until finished
     else:
-        run()  
+        run()
+            
             
     # display one more frame for a bit, then close
     draw(world, clear=False)
-    plt.pause(2) 
+    plt.pause(1) 
     plt.close()
+
+def stop():
+    global _STOP
+    _STOP ^= True
+
+def resume():
+    not stop()
+    
 
 def gen_waypoint_list(x,y,theta):
     """given equally sized lists of x, y, and theta, create waypoint list"""
@@ -617,16 +639,24 @@ class Gui(tk.Frame):
         self.Problem5()
         self.Drline()
         self.Image()
+        self.kill()
 
-    #will delete after
+    def kill(self):
+        self.exit = tk.Button(self, text="Kill\nSimulations",
+                              fg="white", bg="red", command=stop,
+                              width=25, height=5, font=200)
+        self.exit.grid(row=2, column=3, columnspan=10)
+
+
+    #Image of robot Credit: http://planning.cs.uiuc.edu/node659.html
     def Image(self):
-        load = Image.open('prf.png')
+        load = Image.open('robdif.jpg')
         #(width, height)
         load = load.resize((200, 230), Image.ANTIALIAS)
         pic = ImageTk.PhotoImage(load)
         img = tk.Label(self, image=pic)
         img.image = pic
-        img.place(x=600, y=180)
+        img.place(x=430, y=180)
 
     #draw extra lines and square for organizational and aesthetic purposes
     def Drline(self):
@@ -765,6 +795,6 @@ class Gui(tk.Frame):
 if __name__ == '__main__':
     ##create window and setting window's dimensions
     root = tk.Tk()
-    root.geometry("910x480")
+    root.geometry("910x495")
     app = Gui(master=root)
     app.mainloop()
