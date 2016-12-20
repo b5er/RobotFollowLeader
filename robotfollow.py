@@ -392,7 +392,7 @@ def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
         while world.running and (not _STOP):
             world.update()
             draw(world)
-        if next_func:
+        if next_func and not _STOP:
             next_func.pop(0)() #call next function in list, continue simulation
             run()
     
@@ -407,14 +407,9 @@ def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
             world.update()
             draw(world)
             
-                
-                
-            
-            
     #otherwise simulate until finished
     else:
         run()
-            
             
     # display one more frame for a bit, then close
     draw(world, clear=False)
@@ -426,8 +421,8 @@ def stop():
     _STOP ^= True
 
 def resume():
+    #TODO does this actually work as intended?
     not stop()
-    
 
 def gen_waypoint_list(x,y,theta):
     """given equally sized lists of x, y, and theta, create waypoint list"""
