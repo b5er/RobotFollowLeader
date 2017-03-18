@@ -648,11 +648,11 @@ class Gui(tk.Frame):
     def Image(self):
         load = Image.open('robdif.jpg')
         #(width, height)
-        load = load.resize((200, 230), Image.ANTIALIAS)
+        load = load.resize((200, 210), Image.ANTIALIAS)
         pic = ImageTk.PhotoImage(load)
         img = tk.Label(self, image=pic)
         img.image = pic
-        img.place(x=430, y=180)
+        img.place(x=480, y=180)
 
     #draw extra lines and square for organizational and aesthetic purposes
     def Drline(self):
@@ -679,7 +679,7 @@ class Gui(tk.Frame):
         #draws line after "Problem4
         canvas4 = tk.Canvas(self, height= 10, width=4000)
         canvas4.create_rectangle(30,10, 200, 80, outline="black", fill="black")
-        canvas4.place(x=-30,y=340)
+        canvas4.place(x=-30,y=352)
 
     #problem1, bg =button color
     def Problem1(self):
