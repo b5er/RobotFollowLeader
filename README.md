@@ -6,28 +6,28 @@ ___________________________________________
 ___________________________________________
 # Buttons <br />
 
-## Kill Simulations (Red Button, right side) <br />
+## Kill Simulations (Red Button, right side) <br /> <br />
 
-## exit (Black Button, at bottom) <br />
+## exit (Black Button, at bottom) <br /> <br />
 
-## Problem 1: <br />
+## Problem 1: <br /> 
 
 ### - Braking <br />
 ### - Rotating, Accelerating <br />
-### - Turning, Accelerating <br />
+### - Turning, Accelerating <br /> <br />
 
 ## Problem 2: <br />
 
 ### - Closed Loop Control <br />
-### - Closed Loop (Multiple Robots) <br />
+### - Closed Loop (Multiple Robots) <br /> <br />
 
 ## Problem 3: <br />
 
-### - Interpolation Target Pose Trajectory <br />
+### - Interpolation Target Pose Trajectory <br /> <br />
 
 ## Problem 4: <br />
 
-### - Two Robots in Line Formation <br />
+### - Two Robots in Line Formation <br /> <br />
 
 ## Problem 5: <br />
 
