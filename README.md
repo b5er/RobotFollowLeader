@@ -1,2 +1,2 @@
 # RobotFollowLeader
-super spaghetti everything - quick class project
+Synchronous Robot Movement Patterns
