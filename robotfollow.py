@@ -8,6 +8,10 @@ import argparse
 from math import cos, sin, atan2, pi, degrees, sqrt
 import matplotlib.pyplot as plt
 import random
+import tkinter as tk
+from tkinter import ttk
+from PIL import ImageTk, Image
+import tkinter.filedialog
 
 # UNITS IN METERS, RADIANS, SECONDS, KILOGRAMS
 
@@ -18,6 +22,8 @@ _STAGE_MAX_Y =  50
 
 _THRESH_ANGLE = .01
 _THRESH_DISTANCE = .2
+
+_STOP = False
 
 class World:
     """contains/updates robots, gives history of their travel"""
@@ -370,6 +376,7 @@ def plot_waypoints(world):
     return wp
 
 def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
+    
     """update and draw given world.
 
     can simulate for a given number of steps, indefinitely,
@@ -381,28 +388,42 @@ def simulate(world, title='Bots', steps=None, infinite=False, next_func=None):
     that waits for all bots to be ready before proceeding. as it stands, this works for now
     """
     def run():
-        while world.running or infinite:
+        if _STOP==True:
+            resume()
+        while world.running and (not _STOP):
             world.update()
             draw(world)
-        if next_func:
+        if next_func and not _STOP:
             next_func.pop(0)() #call next function in list, continue simulation
-            world.running = True
             run()
-
+    
     create_plot(title)
     #if limited time set
     if steps:
+        resume()
         for i in range(steps):
+            if _STOP:
+                break
+                plt.close()
             world.update()
             draw(world)
+            
     #otherwise simulate until finished
     else:
-        run()  
+        run()
             
     # display one more frame for a bit, then close
     draw(world, clear=False)
-    plt.pause(2) 
+    plt.pause(1) 
     plt.close()
+
+def stop():
+    global _STOP
+    _STOP ^= True
+
+def resume():
+    #TODO does this actually work as intended?
+    not stop()
 
 def gen_waypoint_list(x,y,theta):
     """given equally sized lists of x, y, and theta, create waypoint list"""
@@ -471,7 +492,7 @@ def create_tpt_data(num_waypoints=4, waypoints=[]):
     print("Done")
     return gen_waypoint_list(*rob.get_history())
     
-def problem1():
+def problem1a():
     # create single robot with open loop braking
     rob = Robot(0, theta=pi/3, max_spin=10)
     rob.set_speed(10)
@@ -482,29 +503,37 @@ def problem1():
     world.add_bot(rob)
 
     simulate(world, 'Problem 1: Open Loop Control (Braking)', 10)
+    return
 
-    world.clear_bots()
+def problem1b():
     rob = Robot(0, theta=pi/3, max_spin=10)
     rob.set_speed(1,-1)
+
+    world = World(0)
     world.add_bot(rob)
     rob.set_open_loop_control(lambda x: 1.01 * x, disable_waypoint=True)
     simulate(world, 'Problem 1: Open Loop Control (Rotating, Accelerating)', 70)
+    return
 
-    world.clear_bots()
+def problem1c():
     rob = Robot(0, theta=pi/3, max_spin=10)
     rob.set_speed(1, 2.2)
     rob.set_open_loop_control(lambda right: 1.01 * right, lambda left: 1.008 * left, disable_waypoint=True)
+
+    world = World(0)
     world.add_bot(rob)
     simulate(world, 'Problem 1: Open Loop Control (Turning, Accelerating)', 120)
+    return
 
-def problem2():
+def problem2a():
     world = World(0)
     rob = Robot(0)
     rob.waypoint = [{'x':20,'y':30,'theta':pi/2}]
     world.add_bot(rob)
     simulate(world, 'Problem 2: Closed Loop Control')
-
-    world.clear_bots()
+    return
+    
+def problem2b():
     world = World(0)
     bots = []
     r0 = Robot(0,x=-35,y=30)
@@ -545,6 +574,7 @@ def problem2():
     for r in bots:
         world.add_bot(r)
     simulate(world, 'Problem 2: Closed Loop Control (Multiple Robots)')
+    return
 
 def problem3():
     world = World(0)
@@ -568,6 +598,7 @@ def problem3():
     rob.waypoint = wpcp
     world.add_bot(rob)
     simulate(world, 'Problem 3: Intercepting Target Pose Trajectory')
+    return
 
 def problem4():
     world = World(0)
@@ -578,36 +609,188 @@ def problem4():
     ctl = Controller(world.robots)
     line_proceed = ctl.create_formation(theta=0.4)
     simulate(world, 'Problem 4: Two Robots in Line Formation', next_func=[line_proceed])
+    return
+
 
 def problem5(n=8):
     world = World(n)
     ctl = Controller(world.robots)
     line_proceed = ctl.create_formation() 
     simulate(world, 'Problem 5: N robots in Line Formation (N=' + str(n) + ')', next_func=[line_proceed])
+    return
+
+class Gui(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        #tk.Tk.iconbitmap(self, default="clienticon.ico") (icon)
+        #tk.Tk.wm_title(self, "Title here")
+        self.master.title("ENEE 322 Project Fall 2016")
+        self.master.config(bg="green")
+        self.grid(row=0, column=0)
+        self.exit()
+        self.Problem1()
+        self.Problem2()
+        self.Problem3()
+        self.Problem4()
+        self.Problem5()
+        self.Drline()
+        self.Image()
+        self.kill()
+
+    def kill(self):
+        self.exit = tk.Button(self, text="Kill\nSimulations",
+                              fg="white", bg="red", command=stop,
+                              width=25, height=5, font=200)
+        self.exit.grid(row=2, column=3, columnspan=10)
 
 
-def main():
-    problem1()
-    problem2()
-    problem3()
-    problem4()
-    problem5()
+    #Image of robot Credit: http://planning.cs.uiuc.edu/node659.html
+    def Image(self):
+        load = Image.open('robdif.jpg')
+        #(width, height)
+        load = load.resize((200, 230), Image.ANTIALIAS)
+        pic = ImageTk.PhotoImage(load)
+        img = tk.Label(self, image=pic)
+        img.image = pic
+        img.place(x=430, y=180)
 
+    #draw extra lines and square for organizational and aesthetic purposes
+    def Drline(self):
+        #draws top green rectangle
+        canvas = tk.Canvas(self, height= 15, width=2000)
+        canvas.create_rectangle(30,10, 2000, 80, outline="green", fill="green")
+        canvas.place(x=-30,y=-10)
+
+        #draws line after "Problem1
+        canvas1 = tk.Canvas(self, height= 10, width=4000)
+        canvas1.create_rectangle(30,10, 200, 80, outline="black", fill="black")
+        canvas1.place(x=-30,y=80)
+
+        #draws line after "Problem2
+        canvas2 = tk.Canvas(self, height= 10, width=4000)
+        canvas2.create_rectangle(30,10, 200, 80, outline="black", fill="black")
+        canvas2.place(x=-30,y=165)
+
+        #draws line after "Problem3
+        canvas3 = tk.Canvas(self, height= 10, width=4000)
+        canvas3.create_rectangle(30,10, 200, 80, outline="black", fill="black")
+        canvas3.place(x=-30,y=255)
+
+        #draws line after "Problem4
+        canvas4 = tk.Canvas(self, height= 10, width=4000)
+        canvas4.create_rectangle(30,10, 200, 80, outline="black", fill="black")
+        canvas4.place(x=-30,y=340)
+
+    #problem1, bg =button color
+    def Problem1(self):
+        style1 = ttk.Style()
+        style1.configure("C.TButton", foreground='black', background='black',
+                        relief='raised', font=('Helvetica', 12))
+        style1.configure("BW.TLabel", padding=25)
+        #"Problem 1" text
+        self.l1 = ttk.Label(self, text="Problem 1: ", font=(5, 15, 'bold'),
+                            style="BW.TLabel").grid(row=0, column=0)
+        
+        
+        #"Braking" button
+        self.p1a = ttk.Button(self, text="Braking", style="C.TButton",
+                              command=problem1a)
+        self.p1a.grid(row=0, column=1, sticky='W', padx=5, pady=10,
+                      ipadx=55)
+
+        
+        #"Rotating, Accelerating" button
+        self.p1b = ttk.Button(self, text="Rotating, Accelerating",
+                              style="C.TButton", command=problem1b)
+        self.p1b.grid(row=0, column=2, sticky='W', padx=5, pady=30,
+                      ipadx=29)
+        
+        #"Turning, Accelerating" button
+        self.p1c = ttk.Button(self, text="Turning, Accelerating",
+                              style="C.TButton", command=problem1c)
+        self.p1c.grid(row=0, column=3, sticky='W', padx=5, pady=10,
+                      ipadx=29)
+        
+    
+    #problem2
+    def Problem2(self):
+        #"Problem 2" text
+        self.l2 = ttk.Label(self, text="Problem 2: ", style="BW.TLabel",
+                            font=(5, 15, 'bold')).grid(row=1, column=0)
+
+        
+        style2 = ttk.Style()
+        style2.configure("C.TButton", foreground='black', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Closed Loop Control" button
+        self.p2a = ttk.Button(self, text="Closed Loop Control", 
+                              style="C.TButton", command=problem2a)
+        self.p2a.grid(row=1, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=32)
+
+        #"Closed Loop Control (Multiple Robots)" button
+        self.p2b = ttk.Button(self, text="Closed Loop (Multiple Robots)",
+                              style="C.TButton", command=problem2b)
+        self.p2b.grid(row=1,column=2, padx=5, sticky='W', pady=30)
+
+    #problem3 
+    def Problem3(self):
+        #"Problem 3" text
+        self.l3 = ttk.Label(self, text="Problem 3: ", style="BW.TLabel",
+                            font=(5, 15, 'bold')).grid(row=2, column=0)
+
+        
+        style3 = ttk.Style()
+        style3.configure("C.TButton", foreground='white', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Inter. Target Pose Traj." button
+        self.p3 = ttk.Button(self, text="Inter. Target Pose Traj.", 
+                              style="C.TButton", command=problem3)
+        self.p3.grid(row=2, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=25)
+
+    #problem4
+    def Problem4(self):
+        #"Problem 4" text
+        self.l4 = ttk.Label(self, text="Problem 4: ", font=(5, 15, 'bold'),
+                            style="BW.TLabel").grid(row=3, column=0)
+
+        
+        style4 = ttk.Style()
+        style4.configure("C.TButton", foreground='black', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Inter. Target Pose Traj." button
+        self.p4 = ttk.Button(self, text="Two Robots in Line Formation", 
+                              style="C.TButton", command=problem4)
+        self.p4.grid(row=3, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=0)
+
+    #problem5
+    def Problem5(self):
+        #"Problem 5" text
+        self.l5 = ttk.Label(self, text="Problem 5: ", font=(5, 15, 'bold'),
+                            style="BW.TLabel").grid(row=4, column=0)
+
+        
+        style5 = ttk.Style()
+        style5.configure("C.TButton", foreground='black', background='black',
+                         relief='raised', font=('Helvetica', 12))
+        #"Inter. Target Pose Traj." button
+        self.p5 = ttk.Button(self, text="N robots in Line Formation", 
+                              style="C.TButton", command=problem5)
+        self.p5.grid(row=4, column=1, padx=5, sticky='W', pady=30,
+                      ipadx=12)
+
+    #exit
+    def exit(self):
+        self.exit = tk.Button(self, text="exit", fg="white", bg="black",
+                              command=root.destroy, width=100, anchor='n',
+                              font=5)
+        self.exit.grid(row=6, column=0, columnspan=10)
+  
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser() 
-    parser.add_argument('prob_num', type=int, nargs='?')
-    parser.add_argument('-n', type=int)
-    args = parser.parse_args()
-    if args.n:
-        problem5(n=args.n)
-    elif args.prob_num:
-        probs = {
-            1:problem1, 
-            2:problem2, 
-            3:problem3, 
-            4:problem4,
-            5:problem5,
-        }
-        probs[args.prob_num]()
-    else:
-        main()
+    ##create window and setting window's dimensions
+    root = tk.Tk()
+    root.geometry("910x495")
+    app = Gui(master=root)
+    app.mainloop()
