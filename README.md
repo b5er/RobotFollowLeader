@@ -4,38 +4,31 @@ ___________________________________________
 
 ![All-text](gui.png "Robotic Simulation App")
 ___________________________________________
-# __Buttons__ <br />
+# __Buttons__
 
-## Kill Simulations (Red Button, right side) <br /> <br />
-
-
-## exit (Black Button, at bottom) <br /> <br />
+- Kill Simulations (Red Button, right side)
+- exit (Black Button, at bottom)
 
 
-## Problem 1: <br /> 
-
-### - Braking <br />
-### - Rotating, Accelerating <br />
-### - Turning, Accelerating <br /> <br />
-
-
-## Problem 2: <br />
-
-### - Closed Loop Control <br />
-### - Closed Loop (Multiple Robots) <br /> <br />
+## Problem 1:
+- Braking
+- Rotating, Accelerating
+- Turning, Accelerating
 
 
-## Problem 3: <br />
-
-### - Interpolation Target Pose Trajectory <br /> <br />
-
-
-## Problem 4: <br />
-
-### - Two Robots in Line Formation <br /> <br />
+## Problem 2: 
+- Closed Loop Control
+- Closed Loop (Multiple Robots)
 
 
-## Problem 5: <br />
+## Problem 3:
+- Interpolation Target Pose Trajectory
 
-### - N robots in Line Formation <br />
+
+## Problem 4:
+- Two Robots in Line Formation
+
+
+## Problem 5:
+- N robots in Line Formation
 
